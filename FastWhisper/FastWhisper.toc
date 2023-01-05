@@ -1,0 +1,21 @@
+## Interface: 100002
+## Title: |cffd6266cFastWhisper|r
+## Author: BloodDragon2580
+## Version: 1.0
+## SavedVariables: FastWhisperDB
+
+Locales\enUS.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
+Locales\deDE.lua
+
+Options\LibAddonManager.lua
+Options\InterfaceOptionPage-1.0.lua
+Options\VirtualScrollList-1.0.lua
+
+FastWhisper.lua
+Options\Templates.lua
+Options\MainFrame.lua
+Options\MessageFrame.lua
+Options\NotifyButton.lua
+Options\OptionFrame.lua

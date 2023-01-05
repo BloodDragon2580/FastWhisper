@@ -1,0 +1,3 @@
+<Bindings>
+	<Binding name="FASTWHISPER_TOGGLE" header="FASTWHISPER_TITLE" category="ADDONS"> FastWhisper:ToggleFrame() </Binding>
+</Bindings>

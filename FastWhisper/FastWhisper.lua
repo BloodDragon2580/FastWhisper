@@ -187,7 +187,7 @@ function addon:HandleAction(name, action)
 end
 
 function addon:PlaySound()
-	PlaySoundFile(self.SOUND_FILE, "Master") -- Sound alert
+	PlaySoundFile(self.SOUND_FILE, "Master")
 end
 
 addon.DB_DEFAULTS = {
@@ -307,7 +307,6 @@ function addon:ProcessChatMsg(name, class, text, inform, bnid)
 		end
 	end
 
-	-- Add data into message history
 	local index, data = self:FindPlayerData(name)
 	if index then
 		if index > 1 then

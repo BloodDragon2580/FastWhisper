@@ -4,7 +4,7 @@ local GameTooltip = GameTooltip
 local addon = FastWhisper
 local L = addon.L
 
-local button = addon.templates.CreateIconButton("FastWhisperNotifyButton", UIParent, addon.ICON_FILE, 20, true)
+local button = addon.templates.CreateIconButton("FastWhisperNotifyButton", Minimap, addon.ICON_FILE, 20, true)
 addon.notifyButton = button
 
 addon.frame:HookScript("OnShow", function()
@@ -15,7 +15,7 @@ addon.frame:HookScript("OnHide", function()
 	button:SetChecked(false)
 end)
 
-button:SetPoint("CENTER", 0, 160)
+button:SetPoint("TOPLEFT", -0,0)
 button:SetMovable(true)
 button:SetUserPlaced(true)
 button:SetDontSavePosition(false)
@@ -80,7 +80,7 @@ end)
 
 addon:RegisterEventCallback("OnResetFrames", function()
 	button:ClearAllPoints()
-	button:SetPoint("CENTER", 0, 160)
+	button:SetPoint("TOPLEFT", -0,0)
 end)
 
 addon:RegisterOptionCallback("notifyButton", function(value)
@@ -92,5 +92,5 @@ addon:RegisterOptionCallback("notifyButton", function(value)
 end)
 
 addon:RegisterOptionCallback("buttonScale", function(value)
-	button:SetScale(value / 100)
+	button:SetScale(value / 120)
 end)

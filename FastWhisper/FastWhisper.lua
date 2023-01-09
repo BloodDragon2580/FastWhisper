@@ -200,7 +200,7 @@ addon.DB_DEFAULTS = {
 	receiveOnly = 0,
 	showRealm = 0,
 	foreignOnly = 1,
-	buttonScale = { min = 50, max = 200, step = 5, default = 100 },
+	buttonScale = { min = 50, max = 200, step = 5, default = 120 },
 	listScale = { min = 50, max = 200, step = 5, default = 100 },
 	listWidth = { min = 100, max = 400, step = 5, default = 200 },
 	listHeight = { min = 100, max = 640, step = 20, default = 320 }

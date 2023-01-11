@@ -83,11 +83,6 @@ end
 function templates.CreateIconButton(name, parent, icon, size, checkable)
 	local button = CreateFrame(checkable and "CheckButton" or "Button", name, parent)
 	button:SetSize(size, size)
-	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-	button:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
-	if checkable then
-		button:SetCheckedTexture("Interface\\Buttons\\CheckButtonHilight", "ADD")
-	end
 
 	button.icon = button:CreateTexture(name and (name.."Icon"), "ARTWORK")
 	button.icon:SetSize(size, size)

@@ -15,7 +15,8 @@ addon.frame:HookScript("OnHide", function()
 	button:SetChecked(false)
 end)
 
-button:SetPoint("TOPLEFT", -0,0)
+button:ClearAllPoints()
+button:SetPoint("TOPRIGHT", Minimap, "TOPLEFT")
 button:SetMovable(true)
 button:SetUserPlaced(true)
 button:SetDontSavePosition(false)
@@ -80,7 +81,7 @@ end)
 
 addon:RegisterEventCallback("OnResetFrames", function()
 	button:ClearAllPoints()
-	button:SetPoint("TOPLEFT", -0,0)
+	button:SetPoint("TOPRIGHT", Minimap, "TOPLEFT")
 end)
 
 addon:RegisterOptionCallback("notifyButton", function(value)

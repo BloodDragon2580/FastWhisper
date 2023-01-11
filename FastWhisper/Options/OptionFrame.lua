@@ -116,7 +116,7 @@ local heightSlider = CreateSlider(L["list height"], "listHeight")
 heightSlider:SetPoint("LEFT", widthSlider, "RIGHT", 24, 0)
 
 local function OnResetFrames()
-	notifySlider:SetValue(100)
+	notifySlider:SetValue(120)
 	mainSlider:SetValue(100)
 	widthSlider:SetValue(addon.DB_DEFAULTS.listWidth.default)
 	heightSlider:SetValue(addon.DB_DEFAULTS.listHeight.default)

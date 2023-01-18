@@ -1,7 +1,7 @@
-## Interface: 100002
+## Interface: 100005
 ## Title: |cffd6266cFastWhisper|r
 ## Author: BloodDragon2580
-## Version: 1.3
+## Version: 1.4
 ## SavedVariables: FastWhisperDB
 
 Locales\enUS.lua

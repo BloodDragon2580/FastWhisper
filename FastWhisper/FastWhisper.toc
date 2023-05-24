@@ -1,8 +1,9 @@
 ## Interface: 100100
 ## Title: |cffd6266cFastWhisper|r
 ## Author: BloodDragon2580
-## Version: 1.6
+## Version: 1.7
 ## SavedVariables: FastWhisperDB
+## IconTexture: Interface\AddOns\FastWhisper\Media\Texture\logo
 
 Locales\enUS.lua
 Locales\zhCN.lua

@@ -36,12 +36,13 @@ frame.text:SetPoint("LEFT", frame.icon, "RIGHT", 6, 0)
 frame.text:SetTextColor(1, 1, 1)
 
 frame:SetScript("OnHide", function(self)
-	self:Hide()
-	if GetMouseFocus() ~= curButton then
-		addon.frame.list:TextureButton("highlightTexture")
-	end
-	curButton, curData, curName = nil
+    self:Hide()
+    if type(GetMouseFocus) == "function" and GetMouseFocus() ~= curButton then
+        addon.frame.list:TextureButton("highlightTexture")
+    end
+    curButton, curData, curName = nil
 end)
+
 
 local protectCheck = CreateFrame("CheckButton", frame:GetName().."ProtectCheck", frame, "InterfaceOptionsCheckButtonTemplate")
 protectCheck:SetPoint("LEFT", frame.icon, "RIGHT", 230, 0)

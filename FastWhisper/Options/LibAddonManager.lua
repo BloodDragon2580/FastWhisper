@@ -1,7 +1,7 @@
 local type = type
 local CreateFrame = CreateFrame
 local tinsert = tinsert
-local GetAddOnMetadata = GetAddOnMetadata
+local GetAddOnMetadata = C_AddOns.GetAddOnMetadata or GetAddOnMetadata
 local tonumber = tonumber
 local tostring = tostring
 local select = select

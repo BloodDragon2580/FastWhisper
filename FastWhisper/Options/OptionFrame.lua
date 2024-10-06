@@ -13,7 +13,7 @@ BINDING_NAME_FASTWHISPER_TOGGLE = L["toggle frame"]
 
 -- Initialisiere optionFrame vor der Verwendung
 local frame = CreateFrame("Frame", "FastWhisperOptionFrame", UIParent, "BasicFrameTemplateWithInset")
-frame:SetSize(400, 600) -- Vergrößerte Größe des Frames
+frame:SetSize(400, 760) -- Vergrößerte Größe des Frames
 frame:SetPoint("CENTER")
 frame:Hide() -- Initial ausblenden
 
@@ -36,8 +36,33 @@ frame:SetScript("OnDragStop", StopMovingOrSizing)
 
 addon.optionFrame = frame
 
+-- Globale Variablen für die Checkboxen und Slider
+local notifyButton, receiveOnlyButton, soundButton, realmCheck, foreignCheck, timeCheck, ignoreTagsButton, applyFiltersButton, saveButton
+local notifySlider, mainSlider, widthSlider, heightSlider
+
+-- Funktion zum Initialisieren der Optionen beim Öffnen des Frames
+local function InitializeOptions()
+    -- Checkboxen initialisieren
+    notifyButton:SetChecked(addon.db.notifyButton)
+    receiveOnlyButton:SetChecked(addon.db.receiveOnly)
+    soundButton:SetChecked(addon.db.sound)
+    realmCheck:SetChecked(addon.db.showRealm)
+    foreignCheck:SetChecked(addon.db.foreignOnly)
+    timeCheck:SetChecked(addon.db.time)
+    ignoreTagsButton:SetChecked(addon.db.ignoreTags)
+    applyFiltersButton:SetChecked(addon.db.applyFilters)
+    saveButton:SetChecked(addon.db.save)
+    
+    -- Slider initialisieren
+    notifySlider:SetValue(addon.db.buttonScale or 120) -- Fallback auf 120, wenn kein Wert gespeichert ist
+    mainSlider:SetValue(addon.db.listScale or 100)
+    widthSlider:SetValue(addon.db.listWidth or addon.DB_DEFAULTS.listWidth.default)
+    heightSlider:SetValue(addon.db.listHeight or addon.DB_DEFAULTS.listHeight.default)
+end
+
 -- Funktion zum Öffnen des Frames
 function addon.optionFrame:Open()
+    InitializeOptions() -- Optionen initialisieren, bevor der Frame angezeigt wird
     self:Show()
 end
 
@@ -77,7 +102,7 @@ generalGroup:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -40) -- Titel positionier
 local function AddButton(group, text, key)
     local button = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
     button.text:SetText(text)
-    button:SetPoint("TOPLEFT", group, "BOTTOMLEFT", 0, -25) -- Abstand zwischen Buttons angepasst
+    button:SetPoint("TOPLEFT", group, "BOTTOMLEFT", 0, -5) -- Abstand zwischen Buttons angepasst
     button:SetScript("OnClick", function(self)
         local checked = self:GetChecked()
         addon.db[key] = checked
@@ -86,20 +111,43 @@ local function AddButton(group, text, key)
             addon:PlaySound()
         end
     end)
+
+    -- Die Variable für die Checkbox global setzen
+    if key == "notifyButton" then
+        notifyButton = button
+    elseif key == "receiveOnly" then
+        receiveOnlyButton = button
+    elseif key == "sound" then
+        soundButton = button
+    elseif key == "showRealm" then
+        realmCheck = button
+    elseif key == "foreignOnly" then
+        foreignCheck = button
+    elseif key == "time" then
+        timeCheck = button
+    elseif key == "ignoreTags" then
+        ignoreTagsButton = button
+    elseif key == "applyFilters" then
+        applyFiltersButton = button
+    elseif key == "save" then
+        saveButton = button
+    end
+
     return button
 end
 
-local notifyButton = AddButton(generalGroup, L["show notify button"], "notifyButton")
-local receiveOnlyButton = AddButton(notifyButton, L["receive only"], "receiveOnly")
-local soundButton = AddButton(receiveOnlyButton, L["sound notify"], "sound")
+-- Checkboxen hinzufügen
+notifyButton = AddButton(generalGroup, L["show notify button"], "notifyButton")
+receiveOnlyButton = AddButton(notifyButton, L["receive only"], "receiveOnly")
+soundButton = AddButton(receiveOnlyButton, L["sound notify"], "sound")
 
-local realmCheck = AddButton(soundButton, L["show realms"], "showRealm")
+realmCheck = AddButton(soundButton, L["show realms"], "showRealm")
 
-local foreignCheck = AddButton(realmCheck, L["foreign realms"], "foreignOnly")
-local timeCheck = AddButton(foreignCheck, L["timestamp"], "time")
-local ignoreTagsButton = AddButton(timeCheck, L["ignore tag messages"], "ignoreTags")
-local applyFiltersButton = AddButton(ignoreTagsButton, L["apply third-party filters"], "applyFilters")
-local saveButton = AddButton(applyFiltersButton, L["save messages"], "save")
+foreignCheck = AddButton(realmCheck, L["foreign realms"], "foreignOnly")
+timeCheck = AddButton(foreignCheck, L["timestamp"], "time")
+ignoreTagsButton = AddButton(timeCheck, L["ignore tag messages"], "ignoreTags")
+applyFiltersButton = AddButton(ignoreTagsButton, L["apply third-party filters"], "applyFilters")
+saveButton = AddButton(applyFiltersButton, L["save messages"], "save")
 
 addon:RegisterOptionCallback("showRealm", function(value)
     if value then
@@ -132,18 +180,19 @@ local function CreateSlider(text, key, fmt)
     slider.key = key
     slider.OnSliderInit = Slider_OnSliderInit
     slider.OnValueChanged = Slider_OnSliderChanged
+
     return slider
 end
 
 -- Titel für Frame-Einstellungen
 local frameLabel = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 frameLabel:SetText(L["frame settings"])
-frameLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -280) -- Titelpositionierung angepasst
+frameLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -420) -- Titelpositionierung angepasst
 
-local notifySlider = CreateSlider(L["button scale"], "buttonScale", "%d%%")
-local mainSlider = CreateSlider(L["list scale"], "listScale", "%d%%")
-local widthSlider = CreateSlider(L["list width"], "listWidth")
-local heightSlider = CreateSlider(L["list height"], "listHeight")
+notifySlider = CreateSlider(L["button scale"], "buttonScale", "%d%%")
+mainSlider = CreateSlider(L["list scale"], "listScale", "%d%%")
+widthSlider = CreateSlider(L["list width"], "listWidth")
+heightSlider = CreateSlider(L["list height"], "listHeight")
 
 -- Schieberegler Positionen
 notifySlider:SetPoint("TOPLEFT", frameLabel, "BOTTOMLEFT", 0, -20)

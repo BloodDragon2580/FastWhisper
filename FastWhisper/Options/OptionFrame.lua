@@ -98,11 +98,16 @@ local generalGroup = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 generalGroup:SetText(L["general options"])
 generalGroup:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -40) -- Titel positioniert
 
--- Funktion zum Hinzufügen von Schaltflächen
 local function AddButton(group, text, key)
     local button = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-    button.text:SetText(text)
-    button:SetPoint("TOPLEFT", group, "BOTTOMLEFT", 0, -5) -- Abstand zwischen Buttons angepasst
+    
+    -- Manually create a FontString for the button's label
+    local label = button:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    label:SetText(text)
+    label:SetPoint("LEFT", button, "RIGHT", 5, 0) -- Position the label to the right of the checkbox
+    button.label = label
+
+    button:SetPoint("TOPLEFT", group, "BOTTOMLEFT", 0, -5) -- Adjust vertical spacing between buttons
     button:SetScript("OnClick", function(self)
         local checked = self:GetChecked()
         addon.db[key] = checked
@@ -112,7 +117,7 @@ local function AddButton(group, text, key)
         end
     end)
 
-    -- Die Variable für die Checkbox global setzen
+    -- Assign the button to the appropriate global variable
     if key == "notifyButton" then
         notifyButton = button
     elseif key == "receiveOnly" then

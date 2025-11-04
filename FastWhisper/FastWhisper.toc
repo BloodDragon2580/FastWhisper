@@ -1,7 +1,7 @@
 ## Interface: 120000
 ## Title: |cffd6266cFastWhisper|r
 ## Author: BloodDragon2580
-## Version: 10.0
+## Version: 10.1
 ## SavedVariables: FastWhisperDB
 ## IconTexture: Interface\AddOns\FastWhisper\Media\Texture\logo
 

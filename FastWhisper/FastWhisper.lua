@@ -18,7 +18,9 @@ local BNGetNumFriends = BNGetNumFriends
 local BNGetFriendInfo = C_BattleNet.GetFriendAccountInfo
 local BNGetFriendInfoByID = C_BattleNet.GetAccountInfoByID
 local GMChatFrame_IsGM = GMChatFrame_IsGM
-local ChatFrame_GetMessageEventFilters = ChatFrame_GetMessageEventFilters
+-- TWW 11.2.7+: Chat filter API moved/changed; keep backward compatibility
+local ChatFrame_GetMessageEventFilters =
+	(ChatFrameUtil and ChatFrameUtil.GetMessageEventFilters) or ChatFrame_GetMessageEventFilters
 local ChatFrame_SendTell = ChatFrame_SendTell
 local ChatFrame_SendBNetTell = ChatFrame_SendBNetTell
 local InviteUnit = InviteUnit
@@ -355,7 +357,7 @@ function addon:CHAT_MSG_WHISPER(...)
 		flag = "GM"
 	else
 		if self.db.applyFilters then
-			local filtersList = ChatFrame_GetMessageEventFilters("CHAT_MSG_WHISPER")
+			local filtersList = ChatFrame_GetMessageEventFilters and ChatFrame_GetMessageEventFilters("CHAT_MSG_WHISPER") or nil
 			if filtersList then
 				local _, func
 				for _, func in ipairs(filtersList) do

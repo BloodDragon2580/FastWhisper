@@ -8,6 +8,11 @@ local SETTINGS = SETTINGS
 local addon = FastWhisper
 local L = addon.L
 
+-- DB can be nil early during load; always guard access
+local function DB()
+    return addon and addon.db
+end
+
 BINDING_HEADER_FASTWHISPER_TITLE = "FastWhisper"
 BINDING_NAME_FASTWHISPER_TOGGLE = L["toggle frame"]
 
@@ -25,7 +30,8 @@ end
 local function StopMovingOrSizing(self)
     self:StopMovingOrSizing()
     local point, _, _, x, y = self:GetPoint()
-    addon.db.framePosition = {point, x, y}
+    local db = DB()
+    if db then db.framePosition = {point, x, y} end
 end
 
 frame:SetMovable(true)
@@ -39,6 +45,12 @@ addon.optionFrame = frame
 -- Globale Variablen für die Checkboxen und Slider
 local notifyButton, receiveOnlyButton, soundButton, realmCheck, foreignCheck, timeCheck, ignoreTagsButton, applyFiltersButton, saveButton
 local notifySlider, mainSlider, widthSlider, heightSlider
+
+-- WhisperNotifier (integrated)
+local wnEnableButton, wnMuteButton
+local wnMsgEditBox
+local wnSizeSlider, wnYSlider, wnXSlider, wnVolumeSlider
+local wnChannelDropdown
 
 -- Funktion zum Initialisieren der Optionen beim Öffnen des Frames
 local function InitializeOptions()
@@ -58,6 +70,22 @@ local function InitializeOptions()
     mainSlider:SetValue(addon.db.listScale or 100)
     widthSlider:SetValue(addon.db.listWidth or addon.DB_DEFAULTS.listWidth.default)
     heightSlider:SetValue(addon.db.listHeight or addon.DB_DEFAULTS.listHeight.default)
+
+    -- WhisperNotifier
+    if wnEnableButton then wnEnableButton:SetChecked(addon.db.wn_enable) end
+    if wnMuteButton then wnMuteButton:SetChecked(addon.db.wn_mute) end
+    if wnMsgEditBox then wnMsgEditBox:SetText(addon.db.wn_alertMsg or "") end
+    if wnSizeSlider then wnSizeSlider:SetValue(addon.db.wn_fontSize or addon.DB_DEFAULTS.wn_fontSize.default) end
+    if wnYSlider then wnYSlider:SetValue(addon.db.wn_posY or addon.DB_DEFAULTS.wn_posY.default) end
+    if wnXSlider then wnXSlider:SetValue(addon.db.wn_posX or addon.DB_DEFAULTS.wn_posX.default) end
+    if wnVolumeSlider then wnVolumeSlider:SetValue(addon.db.wn_volumePct or addon.DB_DEFAULTS.wn_volumePct.default) end
+    if wnChannelDropdown and UIDropDownMenu_SetSelectedValue then
+        do
+    local db = DB()
+    local initial = (db and db.wn_channel) or (addon.DB_DEFAULTS.wn_channel or "Master")
+    UIDropDownMenu_SetSelectedValue(wnChannelDropdown, initial)
+end
+    end
 end
 
 -- Funktion zum Öffnen des Frames
@@ -204,6 +232,149 @@ notifySlider:SetPoint("TOPLEFT", frameLabel, "BOTTOMLEFT", 0, -20)
 mainSlider:SetPoint("TOPLEFT", notifySlider, "BOTTOMLEFT", 0, -40)
 widthSlider:SetPoint("TOPLEFT", mainSlider, "BOTTOMLEFT", 0, -40)
 heightSlider:SetPoint("TOPLEFT", widthSlider, "BOTTOMLEFT", 0, -40)
+
+-- ---------------------------------------------------------------------------
+-- WhisperNotifier (integrated)
+
+local function CreateWNEditBox(parent, width)
+    local box = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    box:SetSize(width, 20)
+    box:SetAutoFocus(false)
+    return box
+end
+
+local wnLabel = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+wnLabel:SetText(L["wn options"])
+wnLabel:SetPoint("TOPLEFT", heightSlider, "BOTTOMLEFT", -10, -30)
+
+wnEnableButton = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+wnEnableButton:SetPoint("TOPLEFT", wnLabel, "BOTTOMLEFT", 0, -8)
+wnEnableButton.Text:SetText(L["wn enable"])
+wnEnableButton:SetScript("OnClick", function(self)
+    local checked = self:GetChecked() and 1 or 0
+    addon.db.wn_enable = checked
+end)
+
+wnMuteButton = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+wnMuteButton:SetPoint("LEFT", wnEnableButton.Text, "RIGHT", 20, 0)
+wnMuteButton.Text:SetText(L["wn mute"])
+wnMuteButton:SetScript("OnClick", function(self)
+    local checked = self:GetChecked() and 1 or 0
+    addon.db.wn_mute = checked
+end)
+
+local wnMsgLabel = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+wnMsgLabel:SetPoint("TOPLEFT", wnEnableButton, "BOTTOMLEFT", 0, -16)
+wnMsgLabel:SetText(L["wn message"])
+
+wnMsgEditBox = CreateWNEditBox(frame, 220)
+wnMsgEditBox:SetPoint("LEFT", wnMsgLabel, "RIGHT", 10, 0)
+wnMsgEditBox:SetScript("OnEnterPressed", function(self)
+    local v = self:GetText()
+    if v and v ~= "" then
+        addon.db.wn_alertMsg = v
+        addon:BroadcastOptionEvent("wn_alertMsg", v)
+    end
+    self:ClearFocus()
+end)
+
+wnSizeSlider = CreateFrame("Slider", "FastWhisperWNFontSize", frame, "OptionsSliderTemplate")
+wnSizeSlider:SetMinMaxValues(addon.DB_DEFAULTS.wn_fontSize.min, addon.DB_DEFAULTS.wn_fontSize.max)
+wnSizeSlider:SetValueStep(addon.DB_DEFAULTS.wn_fontSize.step)
+wnSizeSlider:SetWidth(240)
+wnSizeSlider:SetPoint("TOPLEFT", wnMsgLabel, "BOTTOMLEFT", 0, -28)
+_G[wnSizeSlider:GetName().."Low"]:SetText(tostring(addon.DB_DEFAULTS.wn_fontSize.min))
+_G[wnSizeSlider:GetName().."High"]:SetText(tostring(addon.DB_DEFAULTS.wn_fontSize.max))
+_G[wnSizeSlider:GetName().."Text"]:SetText(L["wn font size"])
+wnSizeSlider:SetScript("OnValueChanged", function(self, value)
+    value = math.floor(value)
+    local db = DB()
+    if db then db.wn_fontSize = value end
+    addon:BroadcastOptionEvent("wn_fontSize", value)
+end)
+
+wnYSlider = CreateFrame("Slider", "FastWhisperWNPosY", frame, "OptionsSliderTemplate")
+wnYSlider:SetMinMaxValues(addon.DB_DEFAULTS.wn_posY.min, addon.DB_DEFAULTS.wn_posY.max)
+wnYSlider:SetValueStep(addon.DB_DEFAULTS.wn_posY.step)
+wnYSlider:SetWidth(240)
+wnYSlider:SetPoint("TOPLEFT", wnSizeSlider, "BOTTOMLEFT", 0, -38)
+_G[wnYSlider:GetName().."Low"]:SetText(tostring(addon.DB_DEFAULTS.wn_posY.min))
+_G[wnYSlider:GetName().."High"]:SetText(tostring(addon.DB_DEFAULTS.wn_posY.max))
+_G[wnYSlider:GetName().."Text"]:SetText(L["wn pos y"])
+wnYSlider:SetScript("OnValueChanged", function(self, value)
+    value = math.floor(value)
+    local db = DB()
+    if db then db.wn_posY = value end
+    addon:BroadcastOptionEvent("wn_posY", value)
+end)
+
+wnXSlider = CreateFrame("Slider", "FastWhisperWNPosX", frame, "OptionsSliderTemplate")
+wnXSlider:SetMinMaxValues(addon.DB_DEFAULTS.wn_posX.min, addon.DB_DEFAULTS.wn_posX.max)
+wnXSlider:SetValueStep(addon.DB_DEFAULTS.wn_posX.step)
+wnXSlider:SetWidth(240)
+wnXSlider:SetPoint("TOPLEFT", wnYSlider, "BOTTOMLEFT", 0, -38)
+_G[wnXSlider:GetName().."Low"]:SetText(tostring(addon.DB_DEFAULTS.wn_posX.min))
+_G[wnXSlider:GetName().."High"]:SetText(tostring(addon.DB_DEFAULTS.wn_posX.max))
+_G[wnXSlider:GetName().."Text"]:SetText(L["wn pos x"])
+wnXSlider:SetScript("OnValueChanged", function(self, value)
+    value = math.floor(value)
+    local db = DB()
+    if db then db.wn_posX = value end
+    addon:BroadcastOptionEvent("wn_posX", value)
+end)
+
+wnVolumeSlider = CreateFrame("Slider", "FastWhisperWNVolume", frame, "OptionsSliderTemplate")
+wnVolumeSlider:SetMinMaxValues(addon.DB_DEFAULTS.wn_volumePct.min, addon.DB_DEFAULTS.wn_volumePct.max)
+wnVolumeSlider:SetValueStep(addon.DB_DEFAULTS.wn_volumePct.step)
+wnVolumeSlider:SetWidth(240)
+wnVolumeSlider:SetPoint("TOPLEFT", wnXSlider, "BOTTOMLEFT", 0, -38)
+_G[wnVolumeSlider:GetName().."Low"]:SetText("0%")
+_G[wnVolumeSlider:GetName().."High"]:SetText("100%")
+_G[wnVolumeSlider:GetName().."Text"]:SetText(L["wn volume"])
+wnVolumeSlider:SetScript("OnValueChanged", function(self, value)
+    value = math.floor(value)
+    local db = DB()
+    if db then db.wn_volumePct = value end
+end)
+
+wnChannelDropdown = CreateFrame("Frame", "FastWhisperNotifierChannelDropdown", frame, "UIDropDownMenuTemplate")
+wnChannelDropdown:SetPoint("LEFT", wnVolumeSlider, "RIGHT", -10, -2)
+local channels = {
+    {text=L["wn channel master"], value="Master"},
+    {text=L["wn channel sfx"], value="SFX"},
+    {text=L["wn channel music"], value="Music"},
+    {text=L["wn channel ambience"], value="Ambience"},
+}
+local function ChannelDropdown_OnClick(self)
+    local db = DB()
+    if db then db.wn_channel = self.value end
+    UIDropDownMenu_SetSelectedValue(wnChannelDropdown, self.value)
+end
+UIDropDownMenu_Initialize(wnChannelDropdown, function(self, level)
+    for _, ch in ipairs(channels) do
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = ch.text
+        info.value = ch.value
+        info.func = ChannelDropdown_OnClick
+        UIDropDownMenu_AddButton(info)
+    end
+end)
+UIDropDownMenu_SetWidth(wnChannelDropdown, 90)
+do
+    local db = DB()
+    local initial = (db and db.wn_channel) or (addon.DB_DEFAULTS.wn_channel or "Master")
+    UIDropDownMenu_SetSelectedValue(wnChannelDropdown, initial)
+end
+
+local wnTestBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+wnTestBtn:SetSize(120, 22)
+wnTestBtn:SetPoint("TOPLEFT", wnVolumeSlider, "BOTTOMLEFT", 0, -10)
+wnTestBtn:SetText(L["wn test"])
+wnTestBtn:SetScript("OnClick", function()
+    if addon.WN_ShowAlert then
+        addon:WN_ShowAlert()
+    end
+end)
 
 -- Funktion für Rücksetz-Schaltfläche
 local function OnResetFrames()

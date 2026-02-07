@@ -205,7 +205,23 @@ addon.DB_DEFAULTS = {
 	buttonScale = { min = 50, max = 200, step = 5, default = 120 },
 	listScale = { min = 50, max = 200, step = 5, default = 100 },
 	listWidth = { min = 100, max = 400, step = 5, default = 200 },
-	listHeight = { min = 100, max = 640, step = 20, default = 320 }
+	listHeight = { min = 100, max = 640, step = 20, default = 320 },
+
+	-- WhisperNotifier (integrated)
+	wn_enable = 1,
+	wn_mute = 0,
+	wn_alertMsg = "__DEFAULT__",
+	wn_font = "Friz",
+	wn_colorR = 1,
+	wn_colorG = 1,
+	wn_colorB = 0,
+	wn_colorA = 1,
+	wn_fontSize = { min = 20, max = 80, step = 1, default = 42 },
+	wn_posY = { min = 0, max = 1200, step = 5, default = 880 },
+	wn_posX = { min = -800, max = 800, step = 5, default = 0 },
+	wn_volumePct = { min = 0, max = 100, step = 1, default = 100 },
+	wn_channel = "Master",
+	wn_bgAlert = 0
 }
 
 function addon:OnInitialize(db, firstTime)
@@ -213,15 +229,33 @@ function addon:OnInitialize(db, firstTime)
 		db.version = 4.12
 		local k, v
 		for k, v in pairs(self.DB_DEFAULTS) do
+			-- Preserve existing user settings whenever possible.
+			-- Only apply defaults when the key is missing or invalid.
 			if v == 1 then
-				db[k] = 1
+				if db[k] == nil then
+					db[k] = 1
+				end
 			elseif type(v) == "table" then
-				print(k, db[k])
+				-- Numeric sliders: validate range.
 				if type(db[k]) ~= "number"  or db[k] < v.min or db[k] > v.max then
 					db[k] = v.default
 				end
 			end
 		end
+	end
+
+	-- Defaults for non-numeric / non-boolean settings (WhisperNotifier integration)
+	if db.wn_enable == nil then db.wn_enable = 1 end
+	if db.wn_mute == nil then db.wn_mute = 0 end
+	if db.wn_bgAlert == nil then db.wn_bgAlert = 0 end
+	if type(db.wn_font) ~= "string" or db.wn_font == "" then db.wn_font = "Friz" end
+	if type(db.wn_colorR) ~= "number" then db.wn_colorR = 1 end
+	if type(db.wn_colorG) ~= "number" then db.wn_colorG = 1 end
+	if type(db.wn_colorB) ~= "number" then db.wn_colorB = 0 end
+	if type(db.wn_colorA) ~= "number" then db.wn_colorA = 1 end
+	if type(db.wn_channel) ~= "string" or db.wn_channel == "" then db.wn_channel = "Master" end
+	if type(db.wn_alertMsg) ~= "string" or db.wn_alertMsg == "" or db.wn_alertMsg == "__DEFAULT__" then
+		db.wn_alertMsg = (L and L["wn default text"]) or "Check Whispers!"
 	end
 
 	if type(db.history) ~= "table" then
@@ -240,6 +274,8 @@ function addon:OnInitialize(db, firstTime)
 	self:RegisterEvent("CHAT_MSG_WHISPER_INFORM")
 	self:RegisterEvent("CHAT_MSG_BN_WHISPER")
 	self:RegisterEvent("CHAT_MSG_BN_WHISPER_INFORM")
+
+	self:InitWhisperNotifier()
 
 	self:BroadcastEvent("OnListUpdate")
 end
@@ -423,4 +459,192 @@ function addon:IsIgnoredMessage(text)
 			return pattern
 		end
 	end
+end
+
+-- ---------------------------------------------------------------------------
+-- WhisperNotifier integration (on-screen alert + optional sound)
+-- ---------------------------------------------------------------------------
+
+local function FW_WN_GetForeground()
+	if IsGameWindowActive then
+		local ok, active = pcall(IsGameWindowActive)
+		if ok then return active end
+	end
+	return true
+end
+
+local function FW_WN_GetFontPath(key)
+	if key == "Arial" then
+		return "Fonts\\ARIALN.TTF"
+	elseif key == "Morpheus" then
+		return "Fonts\\MORPHEUS.TTF"
+	elseif key == "Skurri" then
+		return "Fonts\\SKURRI.TTF"
+	end
+	-- Default: Friz Quadrata
+	return (STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF")
+end
+
+function addon:WN_PlaySound()
+	if self.db.wn_mute then
+		return
+	end
+
+	local channel = self.db.wn_channel or "Master"
+	local cvarName = "Sound_MasterVolume"
+	if channel == "SFX" then cvarName = "Sound_SFXVolume"
+	elseif channel == "Music" then cvarName = "Sound_MusicVolume"
+	elseif channel == "Ambience" then cvarName = "Sound_AmbienceVolume" end
+
+	local prevVolume = tonumber(GetCVar and GetCVar(cvarName) or 1) or 1
+	local addonVolume = tonumber(self.db.wn_volumePct or 100) / 100
+	local tempVolume = prevVolume * addonVolume
+
+	if SetCVar and GetCVar then
+		SetCVar(cvarName, tempVolume)
+	end
+	PlaySound(15273, channel)
+	if SetCVar and GetCVar then
+		C_Timer.After(0.5, function()
+			SetCVar(cvarName, prevVolume)
+		end)
+	end
+end
+
+function addon:WN_ShowAlert()
+	local frame = self.wnFrame
+	if not frame then
+		return
+	end
+
+	if frame.hideTimer then
+		frame.hideTimer:Cancel()
+		frame.hideTimer = nil
+	end
+
+	frame.text:SetText(self.db.wn_alertMsg or ((L and L["wn default text"]) or "Check Whispers!"))
+	frame:Show()
+	if not frame.anim:IsPlaying() then
+		frame.anim:Play()
+	end
+
+	local isForeground = FW_WN_GetForeground()
+	if isForeground or self.db.wn_bgAlert then
+		self:WN_PlaySound()
+	end
+
+	frame.hideTimer = C_Timer.NewTimer(3, function()
+		frame.anim:Stop()
+		frame.text:SetAlpha(1)
+		frame:Hide()
+	end)
+end
+
+function addon:InitWhisperNotifier()
+	if self.wnFrame then
+		return
+	end
+
+	local frame = CreateFrame("Frame", "FastWhisperNotifierFrame", UIParent)
+	frame:SetSize(400, 80)
+	frame:Hide()
+	frame.bg = frame:CreateTexture(nil, "BACKGROUND")
+	frame.bg:SetAllPoints(true)
+	frame.bg:SetColorTexture(0, 0, 0, 0)
+
+	frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+	frame.text:SetPoint("CENTER")
+	frame.text:SetText(self.db.wn_alertMsg or ((L and L["wn default text"]) or "Check Whispers!"))
+	frame.text:SetTextColor(self.db.wn_colorR or 1, self.db.wn_colorG or 1, self.db.wn_colorB or 0, self.db.wn_colorA or 1)
+	local fontPath = FW_WN_GetFontPath(self.db.wn_font or "Friz")
+	frame.text:SetFont(fontPath, self.db.wn_fontSize or (self.DB_DEFAULTS.wn_fontSize and self.DB_DEFAULTS.wn_fontSize.default) or 42, "OUTLINE")
+
+	frame:ClearAllPoints()
+	frame:SetPoint("CENTER", UIParent, "BOTTOM", self.db.wn_posX or 0, self.db.wn_posY or 880)
+
+	frame.anim = frame.text:CreateAnimationGroup()
+	local fadeOut = frame.anim:CreateAnimation("Alpha")
+	fadeOut:SetFromAlpha(1)
+	fadeOut:SetToAlpha(0.2)
+	fadeOut:SetDuration(0.4)
+	fadeOut:SetOrder(1)
+
+	local fadeIn = frame.anim:CreateAnimation("Alpha")
+	fadeIn:SetFromAlpha(0.2)
+	fadeIn:SetToAlpha(1)
+	fadeIn:SetDuration(0.4)
+	fadeIn:SetOrder(2)
+	frame.anim:SetLooping("REPEAT")
+
+	self.wnFrame = frame
+
+	-- Keep frame updated when options change
+	self:RegisterOptionCallback("wn_fontSize", function(value)
+		if self.wnFrame and self.wnFrame.text then
+			local fp = FW_WN_GetFontPath(self.db.wn_font or "Friz")
+			self.wnFrame.text:SetFont(fp, value, "OUTLINE")
+		end
+	end)
+	self:RegisterOptionCallback("wn_font", function(value)
+		if self.wnFrame and self.wnFrame.text then
+			local fp = FW_WN_GetFontPath(value or "Friz")
+			local size = tonumber(self.db.wn_fontSize) or 42
+			self.wnFrame.text:SetFont(fp, size, "OUTLINE")
+		end
+	end)
+	local function applyColor()
+		if self.wnFrame and self.wnFrame.text then
+			self.wnFrame.text:SetTextColor(self.db.wn_colorR or 1, self.db.wn_colorG or 1, self.db.wn_colorB or 0, self.db.wn_colorA or 1)
+		end
+	end
+	self:RegisterOptionCallback("wn_colorR", function() applyColor() end)
+	self:RegisterOptionCallback("wn_colorG", function() applyColor() end)
+	self:RegisterOptionCallback("wn_colorB", function() applyColor() end)
+	self:RegisterOptionCallback("wn_colorA", function() applyColor() end)
+	self:RegisterOptionCallback("wn_posX", function(value)
+		if self.wnFrame then
+			self.wnFrame:ClearAllPoints()
+			self.wnFrame:SetPoint("CENTER", UIParent, "BOTTOM", value, self.db.wn_posY or 880)
+		end
+	end)
+	self:RegisterOptionCallback("wn_posY", function(value)
+		if self.wnFrame then
+			self.wnFrame:ClearAllPoints()
+			self.wnFrame:SetPoint("CENTER", UIParent, "BOTTOM", self.db.wn_posX or 0, value)
+		end
+	end)
+	self:RegisterOptionCallback("wn_alertMsg", function(value)
+		if self.wnFrame and self.wnFrame.text then
+			self.wnFrame.text:SetText(value)
+		end
+	end)
+
+	-- Trigger alerts on received whispers
+	self:RegisterEventCallback("OnNewMessage", function(_, _, _, _, inform)
+		-- inform == nil/false => received whisper
+		if inform then
+			return
+		end
+		if not self.db.wn_enable then
+			return
+		end
+		self:WN_ShowAlert()
+	end)
+end
+
+-- Manual test trigger (used by the Settings panel)
+function addon:TestWhisperNotifier()
+	-- Ensure frame exists even if the user toggled settings before the frame was created.
+	if not self.wnFrame then
+		self:InitWhisperNotifier()
+	end
+	if not self.wnFrame then
+		return
+	end
+
+	-- Temporarily show the alert regardless of "receive" vs "inform".
+	local wasEnabled = self.db.wn_enable
+	self.db.wn_enable = 1
+	self:WN_ShowAlert()
+	self.db.wn_enable = wasEnabled
 end

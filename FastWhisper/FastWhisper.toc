@@ -1,17 +1,23 @@
 ## Interface: 120000
 ## Title: |cffd6266cFastWhisper|r
 ## Author: BloodDragon2580
-## Version: 10.7
+## Version: 10.8
 ## SavedVariables: FastWhisperDB
 ## IconTexture: Interface\AddOns\FastWhisper\Media\Texture\logo
 
 Locales\enUS.lua
+Locales\deDE.lua
+Locales\frFR.lua
+Locales\esES.lua
+Locales\esMX.lua
+Locales\itIT.lua
+Locales\ptBR.lua
+Locales\ruRU.lua
+Locales\koKR.lua
 Locales\zhCN.lua
 Locales\zhTW.lua
-Locales\deDE.lua
 
 Options\LibAddonManager.lua
-Options\InterfaceOptionPage-1.0.lua
 Options\VirtualScrollList-1.0.lua
 
 FastWhisper.lua
@@ -19,4 +25,4 @@ Options\Templates.lua
 Options\MainFrame.lua
 Options\MessageFrame.lua
 Options\NotifyButton.lua
-Options\OptionFrame.lua
+Options\SettingsPanel.lua

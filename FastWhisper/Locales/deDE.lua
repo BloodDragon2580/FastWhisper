@@ -33,4 +33,20 @@ addon.L = {
 	["reset frames confirm"] = "Setzt FastWhisper fenster größe/position zu den anfänglichen einstellungen zurück, bist du sicher?",
 	["protected"] = "Geschützt",
 	["cannot delete protected"] = "Nachrichten von |cffff0000%s|r sind geschützt, hebe den Schutz vor dem Löschen auf.",
+
+	-- WhisperNotifier (integrated)
+	["wn options"] = "Flüster-Alarm (Bildschirm)",
+	["wn enable"] = "Flüster-Alarm aktivieren",
+	["wn mute"] = "Alarm-Sound stumm",
+	["wn message"] = "Alarmtext",
+	["wn font size"] = "Schriftgröße",
+	["wn pos y"] = "Position Y",
+	["wn pos x"] = "Position X",
+	["wn volume"] = "Lautstärke",
+	["wn test"] = "Testalarm",
+	["wn default text"] = "!!! Flüster Nachricht !!!",
+	["wn channel master"] = "Master",
+	["wn channel sfx"] = "Effekte",
+	["wn channel music"] = "Musik",
+	["wn channel ambience"] = "Umgebung",
 }

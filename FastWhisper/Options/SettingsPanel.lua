@@ -7,7 +7,21 @@ local GameTooltip = GameTooltip
 local StaticPopup_Show = StaticPopup_Show
 
 local addon = FastWhisper
-local L = addon.L or {}
+
+-- IMPORTANT: Don't cache addon.L at file load time.
+-- Locale tables can be initialized/updated after this file loads.
+-- Caching would cause missing labels/defaults (e.g. empty editbox).
+local function LT(key)
+	local t = addon and addon.L
+	return t and t[key]
+end
+
+-- Backwards-compatible access pattern used throughout this file: L["key"]
+local L = setmetatable({}, {
+	__index = function(_, k)
+		return LT(k)
+	end,
+})
 
 local function DB()
 	return addon and addon.db
@@ -42,6 +56,8 @@ local function CreateHeader(parent, text)
 	local fs = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	fs:SetText(text)
 	fs:SetJustifyH("LEFT")
+	fs:SetWidth(520)
+	fs:SetHeight(24)
 	return fs
 end
 
@@ -49,12 +65,15 @@ local function CreateSubHeader(parent, text)
 	local fs = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	fs:SetText(text)
 	fs:SetJustifyH("LEFT")
+	fs:SetWidth(520)
+	fs:SetHeight(18)
 	return fs
 end
 
 local function CreateCheck(parent, label, tooltip)
 	local cb = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
 	cb.Text:SetText(label)
+	cb:SetHeight(26)
 	if tooltip then
 		cb.tooltipText = tooltip
 		cb:SetScript("OnEnter", function(self)
@@ -71,6 +90,8 @@ end
 
 local function CreateSlider(parent, label, minVal, maxVal, step)
 	local s = CreateFrame("Slider", nil, parent, "OptionsSliderTemplate")
+	-- Give the slider a stable height so our manual layout doesn't collapse.
+	s:SetHeight(34)
 	s:SetMinMaxValues(minVal, maxVal)
 	s:SetValueStep(step or 1)
 	s:SetObeyStepOnDrag(true)
@@ -528,7 +549,13 @@ local function CreatePanel()
 
 		cb_wn_enable:SetChecked(BoolNum(GetOpt("wn_enable", 1)))
 		cb_wn_mute:SetChecked(BoolNum(GetOpt("wn_mute", 0)))
-		eb_msg.editBox:SetText(GetOpt("wn_alertMsg", L["wn default text"] or "Check Whispers!") or "")
+		-- If the stored message is empty, immediately populate it with the locale default.
+		local msg = GetOpt("wn_alertMsg", nil)
+		if type(msg) ~= "string" or msg == "" then
+			msg = (L["wn default text"] or "!!! Whisper message !!!")
+			SetOpt("wn_alertMsg", msg)
+		end
+		eb_msg.editBox:SetText(msg)
 		setSlider(s_font, "wn_fontSize", 42)
 		setSlider(s_posY, "wn_posY", 880)
 		setSlider(s_posX, "wn_posX", 0)
@@ -549,9 +576,9 @@ local function CreatePanel()
 	end
 
 	panel:SetScript("OnShow", function(self)
-		if DB() then
-			self:RefreshFromDB()
-		end
+		-- Refresh even if DB isn't ready yet; GetOpt() provides fallbacks.
+		-- This avoids "empty" controls until the user interacts with them.
+		self:RefreshFromDB()
 	end)
 
 	-- dropdown init after panel exists

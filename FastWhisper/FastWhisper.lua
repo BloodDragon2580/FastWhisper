@@ -255,7 +255,17 @@ function addon:OnInitialize(db, firstTime)
 	if type(db.wn_colorA) ~= "number" then db.wn_colorA = 1 end
 	if type(db.wn_channel) ~= "string" or db.wn_channel == "" then db.wn_channel = "Master" end
 	if type(db.wn_alertMsg) ~= "string" or db.wn_alertMsg == "" or db.wn_alertMsg == "__DEFAULT__" then
-		db.wn_alertMsg = (L and L["wn default text"]) or "Check Whispers!"
+		db.wn_alertMsg = (L and L["wn default text"]) or "!!! Whisper message !!!"
+	end
+
+	-- Midnight/Settings migration: enforce "standard" defaults once (without touching other user settings).
+	-- This turns the on-screen whisper alert on by default and ensures a localized default text.
+	if db._wnDefaultsMigrated == nil then
+		db.wn_enable = 1
+		if type(db.wn_alertMsg) ~= "string" or db.wn_alertMsg == "" or db.wn_alertMsg == "__DEFAULT__" then
+			db.wn_alertMsg = (L and L["wn default text"]) or "!!! Whisper message !!!"
+		end
+		db._wnDefaultsMigrated = 1
 	end
 
 	if type(db.history) ~= "table" then
@@ -333,9 +343,21 @@ function addon:ProcessChatMsg(name, class, text, inform, bnid)
 	end
 
 	if class == "BN" then
-		BNetAccountInfo = BNGetFriendInfoByID(bnid or 0)
-		name = BNetAccountInfo.battleTag
-		if not name then
+		-- Battle.net whispers: try to resolve a BattleTag; fall back to the provided name.
+		local bt
+		local ok, a,b,c,d,e,f,g,h = pcall(BNGetFriendInfoByID, bnid or 0)
+		if ok then
+			-- Modern API may return a table; older API returns multiple values.
+			if type(a) == "table" then
+				bt = a.battleTag or (a.accountInfo and a.accountInfo.battleTag)
+			elseif type(b) == "string" and b:find("#") then
+				bt = b
+			elseif type(c) == "string" and c:find("#") then
+				bt = c
+			end
+		end
+		name = bt or name
+		if not name or name == "" then
 			return
 		end
 	elseif class ~= "GM" then
@@ -344,7 +366,6 @@ function addon:ProcessChatMsg(name, class, text, inform, bnid)
 			name = name.."-"..self.realm
 		end
 	end
-
 	local index, data = self:FindPlayerData(name)
 	if index then
 		if index > 1 then

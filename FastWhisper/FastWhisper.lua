@@ -72,7 +72,7 @@ end
 function addon:GetDisplayName(text, forceRealm)
 	if self:IsBattleTag(text) then
 		local id, name = self:GetBNInfoFromTag(text)
-		return name or UNKNOWN
+		return name or text
 	end
 
 	if forceRealm then
@@ -96,13 +96,19 @@ function addon:GetBNInfoFromTag(tag)
 		return
 	end
 
-	local count = BNGetNumFriends()
-	local i
+	-- BNet information may be temporarily unavailable while the friend list loads.
+	if type(BNGetNumFriends) ~= "function" or type(BNGetFriendInfo) ~= "function" then
+		return
+	end
+
+	local count = BNGetNumFriends() or 0
 	for i = 1, count do
-		BNetAccountInfo = BNGetFriendInfo(i)
-		local id, name, battleTag, online = BNetAccountInfo.bnetAccountID, BNetAccountInfo.accountName, BNetAccountInfo.battleTag, BNetAccountInfo.isOnline
-		if battleTag == tag then
-			return id, name, online
+		local accountInfo = BNGetFriendInfo(i)
+		if accountInfo and accountInfo.battleTag == tag then
+			-- Since the Battle.net API change, the online status is in gameAccountInfo.
+			local gameInfo = accountInfo.gameAccountInfo
+			local online = gameInfo and gameInfo.isOnline or false
+			return accountInfo.bnetAccountID, accountInfo.accountName, online
 		end
 	end
 end

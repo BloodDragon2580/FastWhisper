@@ -67,7 +67,11 @@ protectCheck:SetScript("OnClick", function(self)
 	addon:BroadcastEvent("OnListUpdate")
 end)
 
-local list = CreateFrame("ScrollingMessageFrame", "FastWhisperScrollingMessageFrame", frame, "ChatFrameTemplate")
+-- A standalone message history needs a plain ScrollingMessageFrame.
+-- ChatFrameTemplate now runs Blizzard ChatFrameMixin:OnLoad, which expects
+-- chat-only children such as ScrollToBottomButton and fails without them.
+local list = CreateFrame("ScrollingMessageFrame", "FastWhisperScrollingMessageFrame", frame)
+list:SetFontObject(ChatFontNormal)
 list:SetPoint("TOPLEFT", frame.icon, "BOTTOMLEFT", 0, -6)
 list:SetWidth(LIST_WIDTH)
 list:SetFading(false)

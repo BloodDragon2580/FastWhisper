@@ -85,7 +85,7 @@ addon:RegisterEventCallback("OnResetFrames", function()
 end)
 
 addon:RegisterOptionCallback("notifyButton", function(value)
-	if value then
+	if value == 1 or value == true then
 		button:Show()
 	else
 		button:Hide()

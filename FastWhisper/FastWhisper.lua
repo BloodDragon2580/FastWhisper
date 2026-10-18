@@ -10,7 +10,7 @@ local select = select
 local PlaySoundFile = PlaySoundFile
 local wipe = wipe
 local tremove = tremove
-local SendWho = SendWho
+local SendWho = (C_FriendList and C_FriendList.SendWho) or SendWho
 local min = min
 local max = max
 local GetPlayerInfoByGUID = GetPlayerInfoByGUID
@@ -31,6 +31,19 @@ local UNKNOWN = UNKNOWN
 
 local addon = LibAddonManager:CreateAddon(...)
 local L = addon.L
+
+-- Settings store checkboxes as 0/1; Lua treats 0 as truthy.
+local function IsEnabled(value)
+	return value == 1 or value == true
+end
+
+local function GetClassFromGUID(guid)
+	if type(guid) ~= "string" or guid == "" then return nil end
+	if type(issecretvalue) == "function" and issecretvalue(guid) then return nil end
+	if type(GetPlayerInfoByGUID) ~= "function" then return nil end
+	local ok, _, class = pcall(GetPlayerInfoByGUID, guid)
+	return ok and class or nil
+end
 
 addon:RegisterDB("FastWhisperDB")
 addon:RegisterSlashCmd("fastwhisper", "fw")
@@ -80,8 +93,8 @@ function addon:GetDisplayName(text, forceRealm)
 	end
 
 	local name, realm = self:ParseNameRealm(text)
-	if self.db.showRealm then
-		if foreignOnly and realm == self.realm then
+	if IsEnabled(self.db.showRealm) then
+		if IsEnabled(self.db.foreignOnly) and realm == self.realm then
 			return name
 		else
 			return text
@@ -297,7 +310,7 @@ function addon:OnInitialize(db, firstTime)
 end
 
 function addon:PLAYER_LOGOUT()
-	if not self.db.save then
+	if not IsEnabled(self.db.save) then
 		wipe(self.db.history)
 	end
 end
@@ -337,14 +350,14 @@ function addon:ProcessChatMsg(name, class, text, inform, bnid)
 		return
 	end
 
-	if self.db.ignoreTags then
+	if IsEnabled(self.db.ignoreTags) then
 		local tag = strsub(text, 1, 1)
 		if tag == "<" or tag == "[" then
 			return
 		end
 	end
 
-	if self:IsIgnoredMessage(arg1) then
+	if self:IsIgnoredMessage(text) then
 		return
 	end
 
@@ -403,7 +416,7 @@ function addon:ProcessChatMsg(name, class, text, inform, bnid)
 
 	self:BroadcastEvent("OnListUpdate")
 
-	if not inform and self.db.sound then
+	if not inform and IsEnabled(self.db.sound) then
 		self:PlaySound()
 	end
 
@@ -419,7 +432,7 @@ function addon:CHAT_MSG_WHISPER(...)
 	if flag == "GM" or flag == "DEV" then
 		flag = "GM"
 	else
-		if self.db.applyFilters then
+		if IsEnabled(self.db.applyFilters) then
 			local filtersList = ChatFrame_GetMessageEventFilters and ChatFrame_GetMessageEventFilters("CHAT_MSG_WHISPER") or nil
 			if filtersList then
 				local _, func
@@ -431,7 +444,7 @@ function addon:CHAT_MSG_WHISPER(...)
 			end
 		end
 
-		flag = select(2, GetPlayerInfoByGUID(guid or ""))
+		flag = GetClassFromGUID(guid)
 	end
 
 	self:ProcessChatMsg(name, flag, text)
@@ -442,7 +455,7 @@ function addon:CHAT_MSG_WHISPER_INFORM(...)
 	if flag == "GM" or flag == "DEV" or (GMChatFrame_IsGM and GMChatFrame_IsGM(name)) then
 		flag = "GM"
 	else
-		flag = select(2, GetPlayerInfoByGUID(guid or ""))
+		flag = GetClassFromGUID(guid)
 	end
 
 	self:ProcessChatMsg(name, flag, text, 1)
@@ -513,7 +526,7 @@ local function FW_WN_GetFontPath(key)
 end
 
 function addon:WN_PlaySound()
-	if self.db.wn_mute then
+	if IsEnabled(self.db.wn_mute) then
 		return
 	end
 
@@ -556,7 +569,7 @@ function addon:WN_ShowAlert()
 	end
 
 	local isForeground = FW_WN_GetForeground()
-	if isForeground or self.db.wn_bgAlert then
+	if isForeground or IsEnabled(self.db.wn_bgAlert) then
 		self:WN_PlaySound()
 	end
 
@@ -652,7 +665,7 @@ function addon:InitWhisperNotifier()
 		if inform then
 			return
 		end
-		if not self.db.wn_enable then
+		if not IsEnabled(self.db.wn_enable) then
 			return
 		end
 		self:WN_ShowAlert()

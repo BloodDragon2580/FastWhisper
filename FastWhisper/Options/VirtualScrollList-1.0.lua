@@ -13,10 +13,9 @@ local strupper = strupper
 local hooksecurefunc = hooksecurefunc
 local GetCursorInfo = GetCursorInfo
 local ClearCursor = ClearCursor
-local GetSpellInfo = GetSpellInfo
-local GetSpellLink = GetSpellLink
-local GetItemInfo = GetItemInfo
-local GetItemQualityColor = GetItemQualityColor
+-- Retail 12.1.5: the deprecated global spell and item APIs were removed.
+local GetItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+local GetItemQualityColor = (C_Item and C_Item.GetItemQualityColor) or GetItemQualityColor
 local pcall = pcall
 local HandleModifiedItemClick = HandleModifiedItemClick
 local GameTooltip = GameTooltip
@@ -65,15 +64,21 @@ end
 local SPELL_COLOR_R, SPELL_COLOR_G, SPELL_COLOR_B, SPELL_COLOR_CODE = 0x71 / 0xff, 0xd5 / 0xff, 1
 
 local function GetSpellData(id)
-	local name, _, icon = GetSpellInfo(id)
-	local link = GetSpellLink(id)
-	return name, icon, link, SPELL_COLOR_R, SPELL_COLOR_G, SPELL_COLOR_B
+	if not (C_Spell and C_Spell.GetSpellInfo) then return end
+	local info = C_Spell.GetSpellInfo(id)
+	if not info then return end
+	local link = C_Spell.GetSpellLink and C_Spell.GetSpellLink(id)
+	return info.name, info.iconID, link, SPELL_COLOR_R, SPELL_COLOR_G, SPELL_COLOR_B
 end
 
 local function GetItemData(id)
+	if type(GetItemInfo) ~= "function" then return end
 	local name, link, quality, _, _, _, _, _, _, icon = GetItemInfo(id)
 	if name and quality then
-		local r, g, b = GetItemQualityColor(quality)
+		local r, g, b = 1, 1, 1
+		if type(GetItemQualityColor) == "function" then
+			r, g, b = GetItemQualityColor(quality)
+		end
 		return name, icon, link, r, g, b
 	end
 end

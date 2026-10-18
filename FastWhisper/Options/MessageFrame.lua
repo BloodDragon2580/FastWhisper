@@ -3,6 +3,7 @@ local max = max
 local strlower = strlower
 local gmatch = gmatch
 local gsub = gsub
+local GetMouseFoci = GetMouseFoci
 local GetMouseFocus = GetMouseFocus
 local ChatTypeInfo = ChatTypeInfo
 local ICON_LIST = ICON_LIST
@@ -35,9 +36,20 @@ frame.text:ClearAllPoints()
 frame.text:SetPoint("LEFT", frame.icon, "RIGHT", 6, 0)
 frame.text:SetTextColor(1, 1, 1)
 
+local function IsFocusedButton(button)
+    if not button then return false end
+    if type(GetMouseFoci) == "function" then
+        for _, focus in ipairs(GetMouseFoci()) do
+            if focus == button then return true end
+        end
+        return false
+    end
+    return type(GetMouseFocus) == "function" and GetMouseFocus() == button
+end
+
 frame:SetScript("OnHide", function(self)
     self:Hide()
-    if type(GetMouseFocus) == "function" and GetMouseFocus() ~= curButton then
+    if not IsFocusedButton(curButton) then
         addon.frame.list:TextureButton("highlightTexture")
     end
     curButton, curData, curName = nil
@@ -135,7 +147,7 @@ function frame:UpdateHeight()
 end
 
 function frame:AddMessage(text, inform, timeStamp, update)
-	if inform and addon.db.receiveOnly then
+	if inform and (addon.db.receiveOnly == 1 or addon.db.receiveOnly == true) then
 		return
 	end
 
@@ -162,7 +174,7 @@ function frame:AddMessage(text, inform, timeStamp, update)
 		end
 	end
 
-	if addon.db.time then
+	if addon.db.time == 1 or addon.db.time == true then
 		text = "|cffffd200"..timeStamp.."|r "..text
 	end
 

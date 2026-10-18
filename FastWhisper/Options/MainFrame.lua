@@ -108,7 +108,7 @@ function list:OnButtonEnter(button, data)
 		delButton:StopCounting(1)
 	end
 
-	if addon.db.receiveonly and not data.received then
+	if (addon.db.receiveOnly == 1 or addon.db.receiveOnly == true) and not data.received then
 		addon.messageFrame:Hide()
 		return
 	end
